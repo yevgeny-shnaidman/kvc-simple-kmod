@@ -27,7 +27,7 @@ set -eux
 KMOD_CONTAINER_RUNTIME=/usr/bin/podman
 KMOD_CONTAINER_BUILD_CONTEXT="git://github.com/dustymabe/kvc-simple-kmod.git"
 KMOD_SOFTWARE_NAME=simple-kmod
-KMOD_SOFTWARE_VERSION=a8c6682
+KMOD_SOFTWARE_VERSION=557e851
 KMOD_NAMES=(
     simple-kmod
 )

@@ -17,10 +17,9 @@ ARG KVER
 RUN yum install -y koji
 RUN koji download-build --rpm --arch=$(uname -m) kernel-core-${KVER}    && \
     koji download-build --rpm --arch=$(uname -m) kernel-devel-${KVER}   && \
-    koji download-build --rpm --arch=$(uname -m) kernel-headers-${KVER} && \
     koji download-build --rpm --arch=$(uname -m) kernel-modules-${KVER} && \
-    yum install -y ./kernel-{core,devel,headers,modules}-${KVER}.rpm    && \
-    rm -f ./kernel-{core,devel,headers,modules}-${KVER}.rpm 
+    yum install -y ./kernel-{core,devel,modules}-${KVER}.rpm    && \
+    rm -f ./kernel-{core,devel,modules}-${KVER}.rpm
 
 # Prep and build the module
 RUN yum install -y make

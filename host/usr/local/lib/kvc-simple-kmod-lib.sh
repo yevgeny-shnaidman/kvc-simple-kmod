@@ -32,7 +32,7 @@ KMOD_NAMES=(
     simple-kmod
 )
 
-c_run()   { $KMOD_CONTAINER_RUNTIME run -it --rm $@; }
+c_run()   { $KMOD_CONTAINER_RUNTIME run -i --rm $@; }
 c_build() { $KMOD_CONTAINER_RUNTIME build  $@; }
 c_images(){ $KMOD_CONTAINER_RUNTIME images $@; }
 c_rmi()   { $KMOD_CONTAINER_RUNTIME rmi    $@; }

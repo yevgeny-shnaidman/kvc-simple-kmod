@@ -8,7 +8,7 @@ RUN yum update -y
 # Expecting kmod software version as an input to the build
 ARG KMODVER
 # Grab the software from upstream
-COPY https://github.com/dustymabe/simple-kmod/archive/${KMODVER}.tar.gz ./file.tar.gz
+ADD https://github.com/dustymabe/simple-kmod/archive/${KMODVER}.tar.gz ./file.tar.gz
 RUN tar -x --strip-components=1 -f ./file.tar.gz
 
 # Expecting kernel version as an input to the build

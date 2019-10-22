@@ -110,8 +110,8 @@ load_kmods() {
         if is_kmod_loaded ${module}; then
             echo "Kernel module ${module} already loaded"
         else
-            module=${module//_/-} # replace any underscores with dash
-            c_run --privileged $image insmod /usr/lib/modules/${kver}/${module}.ko
+            module=${module//-/_} # replace any dashes with underscore
+            c_run --privileged $image modprobe ${module}
         fi
     done
 }

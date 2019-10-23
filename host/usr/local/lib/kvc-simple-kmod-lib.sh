@@ -22,7 +22,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-set -eux
+set -eu
 
 # This library is to be sourced in as part of the kmods-via-containers
 # framework. There are some environment variables that are used in this
@@ -37,10 +37,10 @@ KMOD_NAMES=(
     simple-kmod
 )
 
-c_run()   { $KVC_CONTAINER_RUNTIME run -i --rm $@; }
-c_build() { $KVC_CONTAINER_RUNTIME build  $@; }
-c_images(){ $KVC_CONTAINER_RUNTIME images $@; }
-c_rmi()   { $KVC_CONTAINER_RUNTIME rmi    $@; }
+c_run()   { set -x; $KVC_CONTAINER_RUNTIME run -i --rm $@; set +x; }
+c_build() { set -x; $KVC_CONTAINER_RUNTIME build  $@; set +x; }
+c_images(){ set -x; $KVC_CONTAINER_RUNTIME images $@; set +x; }
+c_rmi()   { set -x; $KVC_CONTAINER_RUNTIME rmi    $@; set +x; }
 
 build_kmod_container() {
     kver=$1; image=$2
@@ -82,7 +82,7 @@ build_kmods() {
         x=$(c_run $image modinfo -F version "/lib/modules/${kver}/${module}.ko" | \
                                                                             tr -d '\r')
         if [ "${x}" != "${KMOD_SOFTWARE_VERSION}" ]; then
-            echo "Module version mismatch within container.. rebuilding ${image}..."
+            echo "Module version mismatch within container. rebuilding ${image}"
             build_kmod_container $kver $image
         fi
         # Sanity check to make sure the built kernel modules were really
@@ -90,17 +90,18 @@ build_kmods() {
         x=$(c_run $image modinfo -F vermagic "/lib/modules/${kver}/${module}.ko" | \
                                                                         cut -d ' ' -f 1)
         if [ "${x}" != "${kver}" ]; then
-            echo "Module not built against ${kver}.. rebuilding ${image}..."
+            echo "Module not built against ${kver}. rebuilding ${image}"
             build_kmod_container $kver $image
         fi
     done
 
     # get rid of any dangling containers if they exist
+    echo "Checking for old kernel module images that need to be recycled"
     rmi1=$(c_images -q -f label="name=${KMOD_SOFTWARE_NAME}" -f dangling=true)
     # keep around any non-dangling images for only the most recent 3 kernels
     rmi2=$(c_images -q -f label="name=${KMOD_SOFTWARE_NAME}" -f dangling=false | tail -n +4)
     if [ ! -z "${rmi1}" -o ! -z "${rmi2}" ]; then
-        echo "Cleaning up old kernel module container builds..."
+        echo "Cleaning up old kernel module container builds"
         c_rmi -f $rmi1 $rmi2
     fi
 }

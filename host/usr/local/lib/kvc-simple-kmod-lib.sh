@@ -33,9 +33,7 @@ set -eu
 KMOD_CONTAINER_BUILD_CONTEXT="git://github.com/dustymabe/kvc-simple-kmod.git"
 KMOD_SOFTWARE_NAME=simple-kmod
 KMOD_SOFTWARE_VERSION=557e851
-KMOD_NAMES=(
-    simple-kmod
-)
+KMOD_NAMES=simple-kmod
 
 c_run()   { set -x; $KVC_CONTAINER_RUNTIME run -i --rm $@; set +x; }
 c_build() { set -x; $KVC_CONTAINER_RUNTIME build  $@; set +x; }
@@ -74,7 +72,7 @@ build_kmods() {
     fi
 
     # Sanity checks for each module to load
-    for module in ${KMOD_NAMES[@]}; do
+    for module in ${KMOD_NAMES}; do
         module=${module//_/-} # replace any underscores with dash
         # Sanity check to make sure the built kernel modules were really
         # built against the correct module software version
@@ -112,7 +110,7 @@ load_kmods() {
     image="${KMOD_SOFTWARE_NAME}-${KMOD_SOFTWARE_VERSION}:${kver}"
 
     echo "Loading kernel modules using the kernel module container..."
-    for module in ${KMOD_NAMES[@]}; do
+    for module in ${KMOD_NAMES}; do
         if is_kmod_loaded ${module}; then
             echo "Kernel module ${module} already loaded"
         else
@@ -124,7 +122,7 @@ load_kmods() {
 
 unload_kmods() {
     echo "Unloading kernel modules..."
-    for module in ${KMOD_NAMES[@]}; do
+    for module in ${KMOD_NAMES}; do
         if is_kmod_loaded ${module}; then
             module=${module//-/_} # replace any dashes with underscore
             rmmod "${module}"

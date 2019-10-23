@@ -24,7 +24,12 @@
 
 set -eux
 
-KMOD_CONTAINER_RUNTIME=/usr/bin/podman
+# This library is to be sourced in as part of the kmods-via-containers
+# framework. There are some environment variables that are used in this
+# file that are expected to be defined by the framework already:
+# - KVC_CONTAINER_RUNTIME
+#   - The container runtime to use (example: podman|docker)
+
 KMOD_CONTAINER_BUILD_CONTEXT="git://github.com/dustymabe/kvc-simple-kmod.git"
 KMOD_SOFTWARE_NAME=simple-kmod
 KMOD_SOFTWARE_VERSION=557e851
@@ -32,10 +37,10 @@ KMOD_NAMES=(
     simple-kmod
 )
 
-c_run()   { $KMOD_CONTAINER_RUNTIME run -i --rm $@; }
-c_build() { $KMOD_CONTAINER_RUNTIME build  $@; }
-c_images(){ $KMOD_CONTAINER_RUNTIME images $@; }
-c_rmi()   { $KMOD_CONTAINER_RUNTIME rmi    $@; }
+c_run()   { $KVC_CONTAINER_RUNTIME run -i --rm $@; }
+c_build() { $KVC_CONTAINER_RUNTIME build  $@; }
+c_images(){ $KVC_CONTAINER_RUNTIME images $@; }
+c_rmi()   { $KVC_CONTAINER_RUNTIME rmi    $@; }
 
 build_kmod_container() {
     kver=$1; image=$2

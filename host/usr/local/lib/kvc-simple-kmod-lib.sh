@@ -29,11 +29,19 @@ set -eu
 # file that are expected to be defined by the framework already:
 # - KVC_CONTAINER_RUNTIME
 #   - The container runtime to use (example: podman|docker)
+# - KVC_SOFTWARE_NAME
+#   - The name of this module software bundle
 
-KMOD_CONTAINER_BUILD_CONTEXT="git://github.com/dustymabe/kvc-simple-kmod.git"
-KMOD_SOFTWARE_NAME=simple-kmod
-KMOD_SOFTWARE_VERSION=557e851
-KMOD_NAMES=simple-kmod
+# There are other environment variables that come from the config file
+# delivered alongside this library. The expected variables are:
+# - KMOD_CONTAINER_BUILD_CONTEXT
+#   - A string representing the location of the build context
+# - KMOD_SOFTWARE_VERSION
+#   - The version of the software bundle
+# - KMOD_NAMES
+#   - A space separated list kernel module names that are part of the
+#     module software bundle and are to be checked/loaded/unloaded
+source "/etc/kvc-${KVC_SOFTWARE_NAME}.conf"
 
 c_run()   { set -x; $KVC_CONTAINER_RUNTIME run -i --rm $@; set +x; }
 c_build() { set -x; $KVC_CONTAINER_RUNTIME build  $@; set +x; }
@@ -44,7 +52,7 @@ build_kmod_container() {
     kver=$1; image=$2
     echo "Building ${image} kernel module container..."
     c_build -t ${image}                              \
-        --label="name=${KMOD_SOFTWARE_NAME}"         \
+        --label="name=${KVC_SOFTWARE_NAME}"         \
         --build-arg KVER=${kver}                     \
         --build-arg KMODVER=${KMOD_SOFTWARE_VERSION} \
         ${KMOD_CONTAINER_BUILD_CONTEXT}
@@ -62,7 +70,7 @@ is_kmod_loaded() {
 build_kmods() {
     # Image name will be modname-modversion:kversion
     kver=$1
-    image="${KMOD_SOFTWARE_NAME}-${KMOD_SOFTWARE_VERSION}:${kver}"
+    image="${KVC_SOFTWARE_NAME}-${KMOD_SOFTWARE_VERSION}:${kver}"
 
     # Check to see if it's already built
     if [ ! -z "$(c_images $image --quiet 2>/dev/null)" ]; then
@@ -95,9 +103,9 @@ build_kmods() {
 
     # get rid of any dangling containers if they exist
     echo "Checking for old kernel module images that need to be recycled"
-    rmi1=$(c_images -q -f label="name=${KMOD_SOFTWARE_NAME}" -f dangling=true)
+    rmi1=$(c_images -q -f label="name=${KVC_SOFTWARE_NAME}" -f dangling=true)
     # keep around any non-dangling images for only the most recent 3 kernels
-    rmi2=$(c_images -q -f label="name=${KMOD_SOFTWARE_NAME}" -f dangling=false | tail -n +4)
+    rmi2=$(c_images -q -f label="name=${KVC_SOFTWARE_NAME}" -f dangling=false | tail -n +4)
     if [ ! -z "${rmi1}" -o ! -z "${rmi2}" ]; then
         echo "Cleaning up old kernel module container builds"
         c_rmi -f $rmi1 $rmi2
@@ -107,7 +115,7 @@ build_kmods() {
 load_kmods() {
     # Image name will be modname-modversion:kversion
     kver=$1
-    image="${KMOD_SOFTWARE_NAME}-${KMOD_SOFTWARE_VERSION}:${kver}"
+    image="${KVC_SOFTWARE_NAME}-${KMOD_SOFTWARE_VERSION}:${kver}"
 
     echo "Loading kernel modules using the kernel module container..."
     for module in ${KMOD_NAMES}; do

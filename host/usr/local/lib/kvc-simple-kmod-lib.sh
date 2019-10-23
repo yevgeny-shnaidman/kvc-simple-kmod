@@ -62,6 +62,16 @@ build_kmod_container() {
         --build-arg KVER=${KVC_KVER}                 \
         --build-arg KMODVER=${KMOD_SOFTWARE_VERSION} \
         ${KMOD_CONTAINER_BUILD_CONTEXT}
+
+    # get rid of any dangling containers if they exist
+    echo "Checking for old kernel module images that need to be recycled"
+    rmi1=$(c_images -q -f label="name=${KVC_SOFTWARE_NAME}" -f dangling=true)
+    # keep around any non-dangling images for only the most recent 3 kernels
+    rmi2=$(c_images -q -f label="name=${KVC_SOFTWARE_NAME}" -f dangling=false | tail -n +4)
+    if [ ! -z "${rmi1}" -o ! -z "${rmi2}" ]; then
+        echo "Cleaning up old kernel module container builds"
+        c_rmi -f $rmi1 $rmi2
+    fi
 }
 
 is_kmod_loaded() {
@@ -102,16 +112,6 @@ build_kmods() {
             build_kmod_container
         fi
     done
-
-    # get rid of any dangling containers if they exist
-    echo "Checking for old kernel module images that need to be recycled"
-    rmi1=$(c_images -q -f label="name=${KVC_SOFTWARE_NAME}" -f dangling=true)
-    # keep around any non-dangling images for only the most recent 3 kernels
-    rmi2=$(c_images -q -f label="name=${KVC_SOFTWARE_NAME}" -f dangling=false | tail -n +4)
-    if [ ! -z "${rmi1}" -o ! -z "${rmi2}" ]; then
-        echo "Cleaning up old kernel module container builds"
-        c_rmi -f $rmi1 $rmi2
-    fi
 }
 
 load_kmods() {

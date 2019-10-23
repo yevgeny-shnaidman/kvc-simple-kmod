@@ -31,6 +31,8 @@ set -eu
 #   - The container runtime to use (example: podman|docker)
 # - KVC_SOFTWARE_NAME
 #   - The name of this module software bundle
+# - KVC_KVER
+#   - The kernel version we are targeting
 
 # There are other environment variables that come from the config file
 # delivered alongside this library. The expected variables are:
@@ -43,17 +45,21 @@ set -eu
 #     module software bundle and are to be checked/loaded/unloaded
 source "/etc/kvc-${KVC_SOFTWARE_NAME}.conf"
 
+# The name of the container image to consider. It will be a unique
+# combination of the module software name/version and the targeted
+# kernel version.
+IMAGE="${KVC_SOFTWARE_NAME}-${KMOD_SOFTWARE_VERSION}:${KVC_KVER}"
+
 c_run()   { set -x; $KVC_CONTAINER_RUNTIME run -i --rm $@; set +x; }
 c_build() { set -x; $KVC_CONTAINER_RUNTIME build  $@; set +x; }
 c_images(){ set -x; $KVC_CONTAINER_RUNTIME images $@; set +x; }
 c_rmi()   { set -x; $KVC_CONTAINER_RUNTIME rmi    $@; set +x; }
 
 build_kmod_container() {
-    kver=$1; image=$2
-    echo "Building ${image} kernel module container..."
-    c_build -t ${image}                              \
-        --label="name=${KVC_SOFTWARE_NAME}"         \
-        --build-arg KVER=${kver}                     \
+    echo "Building ${IMAGE} kernel module container..."
+    c_build -t ${IMAGE}                              \
+        --label="name=${KVC_SOFTWARE_NAME}"          \
+        --build-arg KVER=${KVC_KVER}                 \
         --build-arg KMODVER=${KMOD_SOFTWARE_VERSION} \
         ${KMOD_CONTAINER_BUILD_CONTEXT}
 }
@@ -68,15 +74,11 @@ is_kmod_loaded() {
 }
 
 build_kmods() {
-    # Image name will be modname-modversion:kversion
-    kver=$1
-    image="${KVC_SOFTWARE_NAME}-${KMOD_SOFTWARE_VERSION}:${kver}"
-
     # Check to see if it's already built
-    if [ ! -z "$(c_images $image --quiet 2>/dev/null)" ]; then
-        echo "The ${image} kernel module container is already built"
+    if [ ! -z "$(c_images $IMAGE --quiet 2>/dev/null)" ]; then
+        echo "The ${IMAGE} kernel module container is already built"
     else
-        build_kmod_container $kver $image
+        build_kmod_container
     fi
 
     # Sanity checks for each module to load
@@ -85,19 +87,19 @@ build_kmods() {
         # Sanity check to make sure the built kernel modules were really
         # built against the correct module software version
         # Note the tr to delete the trailing carriage return
-        x=$(c_run $image modinfo -F version "/lib/modules/${kver}/${module}.ko" | \
+        x=$(c_run $IMAGE modinfo -F version "/lib/modules/${KVC_KVER}/${module}.ko" | \
                                                                             tr -d '\r')
         if [ "${x}" != "${KMOD_SOFTWARE_VERSION}" ]; then
-            echo "Module version mismatch within container. rebuilding ${image}"
-            build_kmod_container $kver $image
+            echo "Module version mismatch within container. rebuilding ${IMAGE}"
+            build_kmod_container
         fi
         # Sanity check to make sure the built kernel modules were really
         # built against the desired kernel version
-        x=$(c_run $image modinfo -F vermagic "/lib/modules/${kver}/${module}.ko" | \
+        x=$(c_run $IMAGE modinfo -F vermagic "/lib/modules/${KVC_KVER}/${module}.ko" | \
                                                                         cut -d ' ' -f 1)
-        if [ "${x}" != "${kver}" ]; then
-            echo "Module not built against ${kver}. rebuilding ${image}"
-            build_kmod_container $kver $image
+        if [ "${x}" != "${KVC_KVER}" ]; then
+            echo "Module not built against ${KVC_KVER}. rebuilding ${IMAGE}"
+            build_kmod_container
         fi
     done
 
@@ -113,17 +115,13 @@ build_kmods() {
 }
 
 load_kmods() {
-    # Image name will be modname-modversion:kversion
-    kver=$1
-    image="${KVC_SOFTWARE_NAME}-${KMOD_SOFTWARE_VERSION}:${kver}"
-
     echo "Loading kernel modules using the kernel module container..."
     for module in ${KMOD_NAMES}; do
         if is_kmod_loaded ${module}; then
             echo "Kernel module ${module} already loaded"
         else
             module=${module//-/_} # replace any dashes with underscore
-            c_run --privileged $image modprobe ${module}
+            c_run --privileged $IMAGE modprobe ${module}
         fi
     done
 }

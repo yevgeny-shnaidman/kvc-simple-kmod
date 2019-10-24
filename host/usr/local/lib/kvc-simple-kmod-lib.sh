@@ -137,3 +137,8 @@ unload_kmods() {
         fi
     done
 }
+
+wrapper() {
+    echo "Running userspace wrapper using the kernel module container..."
+    c_run --privileged $IMAGE $@
+}

@@ -38,6 +38,9 @@ set -eu
 # delivered alongside this library. The expected variables are:
 # - KMOD_CONTAINER_BUILD_CONTEXT
 #   - A string representing the location of the build context
+# - KMOD_CONTAINER_BUILD_FILE
+#   - The name of the file in the context with the build definition
+#     (i.e. Dockerfile)
 # - KMOD_SOFTWARE_VERSION
 #   - The version of the software bundle
 # - KMOD_NAMES
@@ -58,6 +61,7 @@ c_rmi()   { set -x; $KVC_CONTAINER_RUNTIME rmi    $@; set +x; }
 build_kmod_container() {
     echo "Building ${IMAGE} kernel module container..."
     c_build -t ${IMAGE}                              \
+        --file ${KMOD_CONTAINER_BUILD_FILE}          \
         --label="name=${KVC_SOFTWARE_NAME}"          \
         --build-arg KVER=${KVC_KVER}                 \
         --build-arg KMODVER=${KMOD_SOFTWARE_VERSION} \

@@ -53,14 +53,9 @@ source "/etc/kvc/${KVC_SOFTWARE_NAME}.conf"
 # kernel version.
 IMAGE="${KVC_SOFTWARE_NAME}-${KMOD_SOFTWARE_VERSION}:${KVC_KVER}"
 
-c_run()   { set -x; $KVC_CONTAINER_RUNTIME run -i --rm $@; set +x; }
-c_build() { set -x; $KVC_CONTAINER_RUNTIME build  $@; set +x; }
-c_images(){ set -x; $KVC_CONTAINER_RUNTIME images $@; set +x; }
-c_rmi()   { set -x; $KVC_CONTAINER_RUNTIME rmi    $@; set +x; }
-
 build_kmod_container() {
     echo "Building ${IMAGE} kernel module container..."
-    c_build -t ${IMAGE}                              \
+    kvc_c_build -t ${IMAGE}                              \
         --file ${KMOD_CONTAINER_BUILD_FILE}          \
         --label="name=${KVC_SOFTWARE_NAME}"          \
         --build-arg KVER=${KVC_KVER}                 \
@@ -69,12 +64,12 @@ build_kmod_container() {
 
     # get rid of any dangling containers if they exist
     echo "Checking for old kernel module images that need to be recycled"
-    rmi1=$(c_images -q -f label="name=${KVC_SOFTWARE_NAME}" -f dangling=true)
+    rmi1=$(kvc_c_images -q -f label="name=${KVC_SOFTWARE_NAME}" -f dangling=true)
     # keep around any non-dangling images for only the most recent 3 kernels
-    rmi2=$(c_images -q -f label="name=${KVC_SOFTWARE_NAME}" -f dangling=false | tail -n +4)
+    rmi2=$(kvc_c_images -q -f label="name=${KVC_SOFTWARE_NAME}" -f dangling=false | tail -n +4)
     if [ ! -z "${rmi1}" -o ! -z "${rmi2}" ]; then
         echo "Cleaning up old kernel module container builds"
-        c_rmi -f $rmi1 $rmi2
+        kvc_c_rmi -f $rmi1 $rmi2
     fi
 }
 
@@ -89,7 +84,7 @@ is_kmod_loaded() {
 
 build_kmods() {
     # Check to see if it's already built
-    if [ ! -z "$(c_images $IMAGE --quiet 2>/dev/null)" ]; then
+    if [ ! -z "$(kvc_c_images $IMAGE --quiet 2>/dev/null)" ]; then
         echo "The ${IMAGE} kernel module container is already built"
     else
         build_kmod_container
@@ -101,7 +96,7 @@ build_kmods() {
         # Sanity check to make sure the built kernel modules were really
         # built against the correct module software version
         # Note the tr to delete the trailing carriage return
-        x=$(c_run $IMAGE modinfo -F version "/lib/modules/${KVC_KVER}/${module}.ko" | \
+        x=$(kvc_c_run $IMAGE modinfo -F version "/lib/modules/${KVC_KVER}/${module}.ko" | \
                                                                             tr -d '\r')
         if [ "${x}" != "${KMOD_SOFTWARE_VERSION}" ]; then
             echo "Module version mismatch within container. rebuilding ${IMAGE}"
@@ -109,7 +104,7 @@ build_kmods() {
         fi
         # Sanity check to make sure the built kernel modules were really
         # built against the desired kernel version
-        x=$(c_run $IMAGE modinfo -F vermagic "/lib/modules/${KVC_KVER}/${module}.ko" | \
+        x=$(kvc_c_run $IMAGE modinfo -F vermagic "/lib/modules/${KVC_KVER}/${module}.ko" | \
                                                                         cut -d ' ' -f 1)
         if [ "${x}" != "${KVC_KVER}" ]; then
             echo "Module not built against ${KVC_KVER}. rebuilding ${IMAGE}"
@@ -125,7 +120,7 @@ load_kmods() {
             echo "Kernel module ${module} already loaded"
         else
             module=${module//-/_} # replace any dashes with underscore
-            c_run --privileged $IMAGE modprobe ${module}
+            kvc_c_run --privileged $IMAGE modprobe ${module}
         fi
     done
 }
@@ -144,5 +139,5 @@ unload_kmods() {
 
 wrapper() {
     echo "Running userspace wrapper using the kernel module container..."
-    c_run --privileged $IMAGE $@
+    kvc_c_run --privileged $IMAGE $@
 }

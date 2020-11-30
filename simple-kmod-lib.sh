@@ -27,7 +27,7 @@ set -eu
 # This library is to be sourced in as part of the kmods-via-containers
 # framework. There are some environment variables that are used in this
 # file that are expected to be defined by the framework already:
-# - KVC_CONTAINER_RUNTIME
+# - KVC_CONTAINER_ENVIRONMENT
 #   - The container runtime to use (example: podman|docker)
 # - KVC_SOFTWARE_NAME
 #   - The name of this module software bundle
@@ -83,6 +83,11 @@ is_kmod_loaded() {
 }
 
 build_kmods() {
+
+    if [ $(kvc_c_env) == "kubernetes" ]; then
+        return 0
+    fi
+
     # Check to see if it's already built
     if [ ! -z "$(kvc_c_images $IMAGE --quiet 2>/dev/null)" ]; then
         echo "The ${IMAGE} kernel module container is already built"

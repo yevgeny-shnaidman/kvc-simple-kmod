@@ -7,6 +7,8 @@ WORKDIR /build/
 # This is done in the driver-container-base
 # RUN yum update -y --setopt=install_weak_deps=False --best
 
+RUN sleep 600
+
 RUN yum -y install git
 
 # Expecting kmod software version as an input to the build
